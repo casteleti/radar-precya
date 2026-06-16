@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-900: #2E1A73;
+  --color-brand-700: #5E3ECF;
+  --color-brand-600: #7C4DFF;
+  --color-brand-300: #B79CFF;
+  --color-brand-100: #EDE9FF;
+  --color-success: #2BAE66;
+  --color-warning: #F5A623;
+  --color-danger: #E65A5A;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", "Poppins", sans-serif;
+  background: #F5F5FA;
+  color: #1A1A2E;
+}

@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Clinic {
+  id            String            @id @default(uuid())
+  name          String
+  owner_user_id String?
+  status        ClinicStatus      @default(active)
+  created_at    DateTime          @default(now())
+  updated_at    DateTime          @updatedAt
+
+  users         User[]
+  subscriptions Subscription[]
+  cost_profile  ClinicCostProfile?
+  procedures    Procedure[]
+
+  @@map("clinics")
+}
+
+enum ClinicStatus {
+  active
+  suspended
+  cancelled
+}
+
+model User {
+  id                   String           @id @default(uuid())
+  clinic_id            String
+  email                String
+  name                 String?
+  role                 UserRole         @default(owner)
+  onboarding_completed Boolean          @default(false)
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+
+  clinic               Clinic           @relation(fields: [clinic_id], references: [id])
+  magic_link_tokens    MagicLinkToken[]
+  sessions             Session[]
+
+  @@unique([clinic_id, email])
+  @@index([email])
+  @@map("users")
+}
+
+enum UserRole {
+  owner
+  staff
+}
+
+model MagicLinkToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  token      String    @unique @default(uuid())
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user       User      @relation(fields: [user_id], references: [id])
+
+  @@index([token])
+  @@map("magic_link_tokens")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  user_id    String
+  token      String   @unique @default(uuid())
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@index([token])
+  @@map("sessions")
+}
+
+model Subscription {
+  id                String             @id @default(uuid())
+  clinic_id         String
+  platform          PaymentPlatform
+  platform_order_id String
+  plan              String?
+  status            SubscriptionStatus @default(active)
+  starts_at         DateTime           @default(now())
+  expires_at        DateTime?
+  created_at        DateTime           @default(now())
+  updated_at        DateTime           @updatedAt
+
+  clinic            Clinic             @relation(fields: [clinic_id], references: [id])
+
+  @@unique([platform, platform_order_id])
+  @@index([clinic_id])
+  @@map("subscriptions")
+}
+
+enum PaymentPlatform {
+  kiwify
+  hotmart
+  mercadopago
+  asaas
+  manual
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  suspended
+}
+
+model ClinicCostProfile {
+  id                   String   @id @default(uuid())
+  clinic_id            String   @unique
+  monthly_fixed_costs  Float    @default(0)
+  monthly_appointments Int      @default(1)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  clinic               Clinic   @relation(fields: [clinic_id], references: [id])
+
+  @@map("clinic_cost_profiles")
+}
+
+model Procedure {
+  id             String   @id @default(uuid())
+  clinic_id      String
+  name           String
+  price          Float
+  product_cost   Float    @default(0)
+  commission_pct Float    @default(0)
+  active         Boolean  @default(true)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  clinic         Clinic   @relation(fields: [clinic_id], references: [id])
+
+  @@index([clinic_id])
+  @@map("procedures")
+}
+
+model WebhookLog {
+  id         String          @id @default(uuid())
+  platform   PaymentPlatform
+  event_type String
+  event_id   String
+  payload    Json
+  processed  Boolean         @default(false)
+  error      String?
+  created_at DateTime        @default(now())
+
+  @@unique([platform, event_id])
+  @@index([platform, event_id])
+  @@map("webhook_logs")
+}
