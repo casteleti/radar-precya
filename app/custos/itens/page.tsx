@@ -1,35 +1,31 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import ProcedimentosClient from "./ProcedimentosClient";
+import ItensClient from "./ItensClient";
 
-export default async function ProcedimentosPage() {
+export default async function ItensPage() {
   const session = await getServerSession();
   if (!session) redirect("/auth/login");
   if (!session.onboarding_completed) redirect("/onboarding");
 
-  const [procedures, costProfile] = await Promise.all([
-    prisma.procedure.findMany({
-      where: { clinic_id: session.clinic_id, active: true },
-      orderBy: { name: "asc" },
+  const [costItems, costProfile] = await Promise.all([
+    prisma.clinicCostItem.findMany({
+      where: { clinic_id: session.clinic_id },
+      orderBy: { created_at: "asc" },
     }),
     prisma.clinicCostProfile.findUnique({ where: { clinic_id: session.clinic_id } }),
   ]);
 
   return (
-    <ProcedimentosClient
+    <ItensClient
       clinicName={session.clinic_name}
-      procedures={procedures.map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        product_cost: p.product_cost,
-        commission_pct: p.commission_pct,
-        time_minutes: p.time_minutes,
-        return_time_minutes: p.return_time_minutes,
-        category: p.category,
+      initialItems={costItems.map((i) => ({
+        id: i.id,
+        description: i.description,
+        category: i.category,
+        monthly_value: i.monthly_value,
       }))}
-      clinic={
+      costProfile={
         costProfile
           ? {
               monthly_fixed_costs: costProfile.monthly_fixed_costs,

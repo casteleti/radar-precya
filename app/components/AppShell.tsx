@@ -12,13 +12,13 @@ type NavKey = "inicio" | "procedimentos" | "custos" | "conta";
 const NAV_ITEMS: { key: NavKey; label: string; href: string }[] = [
   { key: "inicio", label: "Início", href: "/calculadora" },
   { key: "procedimentos", label: "Procedimentos", href: "/procedimentos" },
-  { key: "custos", label: "Custos", href: "/configuracoes" },
+  { key: "custos", label: "Custos", href: "/custos" },
   { key: "conta", label: "Conta", href: "/conta" },
 ];
 
 function activeKeyFromPath(pathname: string): NavKey {
   if (pathname.startsWith("/procedimentos")) return "procedimentos";
-  if (pathname.startsWith("/configuracoes")) return "custos";
+  if (pathname.startsWith("/custos")) return "custos";
   if (pathname.startsWith("/conta")) return "conta";
   return "inicio";
 }

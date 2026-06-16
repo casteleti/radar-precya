@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PROCEDURE_CATEGORIES } from "@/lib/procedureCategories";
+
+const PROCEDURE_CATEGORY_VALUES = PROCEDURE_CATEGORIES.map((c) => c.value) as [string, ...string[]];
 
 const schema = z.object({
   name: z.string().min(1).max(80).trim(),
@@ -9,6 +12,7 @@ const schema = z.object({
   return_time_minutes: z.number().int().min(0).max(600).default(0),
   product_cost: z.number().min(0).default(0),
   commission_pct: z.number().min(0).max(100).default(0),
+  category: z.enum(PROCEDURE_CATEGORY_VALUES).default("outros"),
 });
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -19,6 +19,7 @@ model Clinic {
   subscriptions Subscription[]
   cost_profile  ClinicCostProfile?
   procedures    Procedure[]
+  cost_items    ClinicCostItem[]
 
   @@map("clinics")
 }
@@ -150,6 +151,7 @@ model Procedure {
   commission_pct       Float    @default(0)
   time_minutes         Int      @default(0)
   return_time_minutes  Int      @default(0)
+  category             String   @default("outros")
   active               Boolean  @default(true)
   created_at           DateTime @default(now())
   updated_at           DateTime @updatedAt
@@ -158,6 +160,19 @@ model Procedure {
 
   @@index([clinic_id])
   @@map("procedures")
+}
+
+model ClinicCostItem {
+  id            String   @id @default(cuid())
+  clinic_id     String
+  description   String
+  category      String
+  monthly_value Float
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  clinic        Clinic   @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
+
+  @@map("clinic_cost_items")
 }
 
 model WebhookLog {

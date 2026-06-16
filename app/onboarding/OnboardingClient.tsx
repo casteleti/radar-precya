@@ -209,7 +209,29 @@ export default function OnboardingClient({ initialClinicName }: Props) {
       if (clinicName.trim()) {
         await post("/api/onboarding/step1", { clinic_name: clinicName.trim() });
       }
-      await post("/api/onboarding/step2", { monthly_fixed_costs: total });
+      if (costMode === "direct") {
+        await post("/api/onboarding/step2", { monthly_fixed_costs: total });
+      } else {
+        const categoryValueMap: Record<string, string> = {
+          "Aluguel": "aluguel",
+          "Equipe": "equipe",
+          "Pró-labore": "pro_labore",
+          "Marketing": "marketing",
+          "Softwares": "softwares",
+          "Contador": "contador",
+          "Equipamentos / manutenção": "equipamentos",
+          "Água, luz e internet": "agua_luz_internet",
+          "Outros": "outros",
+        };
+        const items = categories
+          .filter((c) => c.value > 0)
+          .map((c) => ({
+            description: c.label,
+            category: categoryValueMap[c.label] ?? "outros",
+            monthly_value: c.value,
+          }));
+        await post("/api/onboarding/step2", { items });
+      }
       setFixedCosts(total);
       setScreen("capacity");
     } catch (e) {

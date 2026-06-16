@@ -8,7 +8,9 @@ import {
   classificationLabel,
   generateWhatsAppMessage,
   type ClinicCapacity,
+  type SimulationResult,
 } from "@/lib/calculadora";
+import { PROCEDURE_CATEGORIES, procedureCategoryIcon, procedureCategoryLabel } from "@/lib/procedureCategories";
 import AppShell from "@/app/components/AppShell";
 
 interface Procedure {
@@ -19,6 +21,7 @@ interface Procedure {
   commission_pct: number;
   time_minutes: number;
   return_time_minutes: number;
+  category: string;
 }
 
 interface Props {
@@ -30,6 +33,88 @@ interface Props {
 const BASE_TIME_OPTIONS = [15, 30, 45, 60];
 const RETURN_TIME_OPTIONS = [0, 15, 30];
 const DISCOUNT_CHIPS = [0, 5, 10, 15, 20];
+
+type Badge = "Mais lucrativo" | "Maior oportunidade" | "Consome agenda" | "Baixo lucro/hora" | "Bom equilíbrio";
+
+function computeBadges(
+  clinic: ClinicCapacity,
+  procedures: Procedure[]
+): Map<string, Badge> {
+  const badges = new Map<string, Badge>();
+  if (procedures.length < 2) return badges;
+
+  const results = procedures.map((p) => ({
+    proc: p,
+    result: simulate(clinic, p, 0) as SimulationResult,
+  }));
+
+  const valid = results.filter((r) => r.result.valid);
+  if (valid.length === 0) return badges;
+
+  // Mais lucrativo: highest profit_per_hour
+  const mostProfitable = valid.reduce((a, b) => (b.result.profit_per_hour > a.result.profit_per_hour ? b : a));
+  badges.set(mostProfitable.proc.id, "Mais lucrativo");
+
+  // Maior oportunidade: largest gap among those below preco_saudavel
+  const belowSaudavel = valid.filter((r) => r.result.current_price < r.result.preco_saudavel);
+  if (belowSaudavel.length > 0) {
+    const biggestGap = belowSaudavel.reduce((a, b) => {
+      const gapA = (a.result.preco_saudavel - a.result.current_price) / a.result.current_price;
+      const gapB = (b.result.preco_saudavel - b.result.current_price) / b.result.current_price;
+      return gapB > gapA ? b : a;
+    });
+    if (!badges.has(biggestGap.proc.id)) {
+      badges.set(biggestGap.proc.id, "Maior oportunidade");
+    }
+  }
+
+  // Consome agenda: highest time_minutes
+  const mostTime = results.reduce((a, b) => (b.proc.time_minutes > a.proc.time_minutes ? b : a));
+  if (!badges.has(mostTime.proc.id)) {
+    badges.set(mostTime.proc.id, "Consome agenda");
+  }
+
+  // Average profit per hour
+  const avgProfitPerHour =
+    valid.reduce((sum, r) => sum + r.result.profit_per_hour, 0) / valid.length;
+
+  for (const r of valid) {
+    if (badges.has(r.proc.id)) continue;
+    if (r.result.profit_per_hour < avgProfitPerHour) {
+      badges.set(r.proc.id, "Baixo lucro/hora");
+    }
+  }
+
+  for (const r of results) {
+    if (!badges.has(r.proc.id)) {
+      badges.set(r.proc.id, "Bom equilíbrio");
+    }
+  }
+
+  return badges;
+}
+
+function badgeStyle(badge: Badge): string {
+  switch (badge) {
+    case "Mais lucrativo":
+      return "bg-[#EAFBF1] text-[#1F9D55]";
+    case "Maior oportunidade":
+      return "bg-[#EDE9FF] text-[#5E3ECF]";
+    case "Consome agenda":
+      return "bg-[#FFF8EB] text-[#B8860B]";
+    case "Baixo lucro/hora":
+      return "bg-[#FFF0F0] text-[#E65A5A]";
+    default:
+      return "bg-[#F5F5FA] text-[#9999BB]";
+  }
+}
+
+function statusDotColor(margin_pct: number): string {
+  const c = classificationLabel(margin_pct);
+  if (c.emoji === "🟢") return "bg-[#1F9D55]";
+  if (c.emoji === "⚠️") return "bg-[#B8860B]";
+  return "bg-[#E65A5A]";
+}
 
 function Chip({
   active,
@@ -66,6 +151,7 @@ function emptyForm() {
     hasCommission: null as boolean | null,
     commissionPct: 0,
     returnTime: 0,
+    category: "outros",
   };
 }
 
@@ -80,6 +166,7 @@ function formFromProcedure(p: Procedure) {
     hasCommission: p.commission_pct > 0,
     commissionPct: p.commission_pct,
     returnTime: p.return_time_minutes,
+    category: p.category,
   };
 }
 
@@ -134,6 +221,7 @@ export default function ProcedimentosClient({ clinicName, procedures, clinic }: 
       return_time_minutes: form.returnTime,
       product_cost: form.productCost,
       commission_pct: form.hasCommission ? form.commissionPct : 0,
+      category: form.category,
     };
     try {
       const url = editingId ? `/api/procedures/${editingId}` : "/api/procedures";
@@ -193,6 +281,20 @@ export default function ProcedimentosClient({ clinicName, procedures, clinic }: 
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const badges = useMemo(() => {
+    if (!clinic) return new Map<string, Badge>();
+    return computeBadges(clinic, list);
+  }, [clinic, list]);
+
+  const listResults = useMemo(() => {
+    if (!clinic) return new Map<string, SimulationResult>();
+    const map = new Map<string, SimulationResult>();
+    for (const p of list) {
+      map.set(p.id, simulate(clinic, p, 0));
+    }
+    return map;
+  }, [clinic, list]);
+
   return (
     <AppShell clinicName={clinicName}>
       <main className="max-w-3xl mx-auto p-4 pt-6 flex flex-col gap-4">
@@ -211,22 +313,77 @@ export default function ProcedimentosClient({ clinicName, procedures, clinic }: 
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {list.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => startEdit(p)}
-                    className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 text-left hover:border-[#B79CFF] transition-all active:scale-[0.99]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-[#1A1A2E]">{p.name}</p>
-                      <p className="font-semibold text-[#5E3ECF]">{formatCurrency(p.price)}</p>
+                {list.map((p) => {
+                  const result = listResults.get(p.id);
+                  const badge = badges.get(p.id);
+                  const classification = result && result.valid ? classificationLabel(result.margin_pct) : null;
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex flex-col gap-3 hover:border-[#B79CFF] transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-lg shrink-0">{procedureCategoryIcon(p.category)}</span>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#1A1A2E] truncate">{p.name}</p>
+                            <p className="text-xs text-[#9999BB]">{procedureCategoryLabel(p.category)}</p>
+                          </div>
+                        </div>
+                        {badge && (
+                          <span className={`text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${badgeStyle(badge)}`}>
+                            {badge}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-[#FAFAFE] rounded-xl p-2 text-center">
+                          <p className="text-[10px] text-[#9999BB]">Preço atual</p>
+                          <p className="text-sm font-semibold text-[#1A1A2E]">{formatCurrency(p.price)}</p>
+                        </div>
+                        <div className="bg-[#FAFAFE] rounded-xl p-2 text-center">
+                          <p className="text-[10px] text-[#9999BB]">Lucro/hora</p>
+                          <p className="text-sm font-semibold text-[#1A1A2E]">
+                            {result && result.valid ? formatCurrency(result.profit_per_hour) : "-"}
+                          </p>
+                        </div>
+                        <div className="bg-[#FAFAFE] rounded-xl p-2 text-center">
+                          <p className="text-[10px] text-[#9999BB]">Margem</p>
+                          <p className="text-sm font-semibold text-[#1A1A2E] flex items-center justify-center gap-1">
+                            {result && result.valid && (
+                              <span className={`w-2 h-2 rounded-full ${statusDotColor(result.margin_pct)}`} />
+                            )}
+                            {result && result.valid ? `${result.margin_pct.toFixed(0)}%` : "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {classification && (
+                        <p className="text-xs text-[#9999BB]">
+                          {classification.emoji} {classification.label}
+                        </p>
+                      )}
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => router.push(`/procedimentos/${p.id}`)}
+                          className="flex-1 h-10 bg-[#EDE9FF] text-[#5E3ECF] rounded-xl font-semibold text-sm
+                                     hover:bg-[#E0D7FF] transition-all active:scale-95"
+                        >
+                          Analisar →
+                        </button>
+                        <button
+                          onClick={() => startEdit(p)}
+                          className="flex-1 h-10 bg-white border border-[#E5E5F0] text-[#4A4A6A] rounded-xl font-semibold text-sm
+                                     hover:border-[#B79CFF] transition-all active:scale-95"
+                        >
+                          Editar
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-[#9999BB] mt-1">
-                      {p.time_minutes > 0 ? `${p.time_minutes} min` : "Tempo não informado"}
-                      {p.return_time_minutes > 0 ? ` + ${p.return_time_minutes} min retorno` : ""}
-                    </p>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -257,6 +414,17 @@ export default function ProcedimentosClient({ clinicName, procedures, clinic }: 
                   className="w-full h-11 px-4 rounded-xl border border-[#E5E5F0] text-base
                              focus:outline-none focus:ring-2 focus:ring-[#B79CFF] focus:border-[#5E3ECF]"
                 />
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-[#4A4A6A] mb-2">Categoria</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PROCEDURE_CATEGORIES.map((c) => (
+                    <Chip key={c.value} active={form.category === c.value} onClick={() => setForm({ ...form, category: c.value })}>
+                      {procedureCategoryIcon(c.value)} {c.label}
+                    </Chip>
+                  ))}
+                </div>
               </div>
 
               <div>
