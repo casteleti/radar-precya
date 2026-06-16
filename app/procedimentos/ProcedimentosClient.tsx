@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, parseCurrency } from "@/lib/utils";
+import {
+  simulate,
+  classificationLabel,
+  generateWhatsAppMessage,
+  type ClinicCapacity,
+} from "@/lib/calculadora";
+import AppShell from "@/app/components/AppShell";
 
 interface Procedure {
   id: string;
@@ -17,10 +24,12 @@ interface Procedure {
 interface Props {
   clinicName: string;
   procedures: Procedure[];
+  clinic: ClinicCapacity | null;
 }
 
 const BASE_TIME_OPTIONS = [15, 30, 45, 60];
 const RETURN_TIME_OPTIONS = [0, 15, 30];
+const DISCOUNT_CHIPS = [0, 5, 10, 15, 20];
 
 function Chip({
   active,
@@ -74,7 +83,7 @@ function formFromProcedure(p: Procedure) {
   };
 }
 
-export default function ProcedimentosClient({ clinicName, procedures }: Props) {
+export default function ProcedimentosClient({ clinicName, procedures, clinic }: Props) {
   const router = useRouter();
   const [list, setList] = useState(procedures);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,11 +91,16 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
   const [form, setForm] = useState(emptyForm());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   function startEdit(p: Procedure) {
     setEditingId(p.id);
     setCreating(false);
     setForm(formFromProcedure(p));
+    setDiscount(0);
     setError("");
   }
 
@@ -94,6 +108,7 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
     setCreating(true);
     setEditingId(null);
     setForm(emptyForm());
+    setDiscount(0);
     setError("");
   }
 
@@ -146,24 +161,45 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
 
   const showForm = creating || editingId !== null;
 
-  return (
-    <div className="min-h-screen bg-[#FAFAFE]">
-      <header className="bg-white border-b border-[#E5E5F0] px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <button onClick={() => router.push("/calculadora")} className="text-lg font-semibold text-[#2E1A73]">
-            ← Radar Precya
-          </button>
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push("/configuracoes")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
-              Configurações
-            </button>
-            <span className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</span>
-          </div>
-        </div>
-      </header>
+  // Live simulation preview for the form being edited/created
+  const previewProcedure = useMemo(
+    () => ({
+      price: form.price,
+      product_cost: form.productCost,
+      commission_pct: form.hasCommission ? form.commissionPct : 0,
+      time_minutes: form.time ?? 0,
+      return_time_minutes: form.returnTime,
+    }),
+    [form]
+  );
 
-      <main className="max-w-3xl mx-auto p-4 pt-6 pb-12 flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-[#1A1A2E]">Procedimentos</h1>
+  const canSimulate = clinic !== null && form.price > 0 && !!form.time;
+
+  const result = useMemo(() => {
+    if (!clinic || !canSimulate) return null;
+    return simulate(clinic, previewProcedure, discount);
+  }, [clinic, canSimulate, previewProcedure, discount]);
+
+  const classification = result && result.valid ? classificationLabel(result.margin_pct) : null;
+
+  const whatsappText = useMemo(() => {
+    if (!result || !result.valid) return "";
+    return generateWhatsAppMessage(form.name || "procedimento", discount, result.final_price, form.price, result.status);
+  }, [result, form.name, form.price, discount]);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(whatsappText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <AppShell clinicName={clinicName}>
+      <main className="max-w-3xl mx-auto p-4 pt-6 flex flex-col gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-[#1A1A2E]">Procedimentos</h1>
+          <p className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</p>
+        </div>
 
         {!showForm && (
           <>
@@ -305,7 +341,7 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
 
             {error && <p className="text-sm text-[#E65A5A] mb-3">{error}</p>}
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 mb-2">
               <button
                 onClick={cancel}
                 className="h-12 px-5 bg-white border border-[#E5E5F0] text-[#4A4A6A] rounded-xl font-semibold
@@ -322,9 +358,137 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
                 {loading ? "Salvando..." : "Salvar"}
               </button>
             </div>
+
+            {!clinic && (
+              <p className="text-xs text-[#9999BB] mt-2">
+                Configure os custos da clínica em Custos para ver a simulação de preço.
+              </p>
+            )}
+
+            {clinic && result && !result.valid && (
+              <div className="bg-[#FFF0F0] border border-[#FFD0D0] rounded-2xl p-4 text-sm text-[#E65A5A] mt-4">
+                {result.error}
+              </div>
+            )}
+
+            {clinic && result && result.valid && (
+              <div className="mt-5 pt-5 border-t border-[#E5E5F0] flex flex-col gap-4">
+                <h3 className="text-sm font-semibold text-[#4A4A6A]">Simulação de preço</h3>
+
+                <div className="bg-[#2E1A73] rounded-2xl shadow-sm p-6 text-center">
+                  <p className="text-white/70 text-xs uppercase tracking-wide mb-1">Preço saudável</p>
+                  <p className="text-4xl font-bold text-white">{formatCurrency(result.preco_saudavel)}</p>
+                  {classification && (
+                    <span className="bg-white/15 text-white text-xs px-3 py-1 rounded-full inline-block mt-2">
+                      {classification.emoji} {classification.label}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
+                    <p className="text-xs text-[#9999BB]">Preço mínimo</p>
+                    <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.preco_minimo)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
+                    <p className="text-xs text-[#9999BB]">Preço premium</p>
+                    <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.preco_premium)}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-[#4A4A6A]">Simular desconto</label>
+                    <span className="text-lg font-bold text-[#5E3ECF]">{discount}%</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {DISCOUNT_CHIPS.map((d) => (
+                      <Chip key={d} active={discount === d} onClick={() => setDiscount(d)}>{d}%</Chip>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`rounded-xl p-3 text-center ${classification?.emoji === "❌" ? "bg-[#FFF0F0]" : classification?.emoji === "⚠️" ? "bg-[#FFF8EB]" : "bg-[#EAFBF1]"}`}>
+                    <p className="text-xs text-[#9999BB]">Margem</p>
+                    <p className="font-semibold text-[#1A1A2E]">{result.margin_pct.toFixed(0)}%</p>
+                    <p className="text-xs mt-1">{classification?.emoji} {classification?.label}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
+                    <p className="text-xs text-[#9999BB]">Lucro / lucro por hora</p>
+                    <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.profit)}</p>
+                    <p className="text-xs text-[#9999BB]">{formatCurrency(result.profit_per_hour)}/h</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex items-center justify-between">
+                  <span className="text-sm text-[#4A4A6A]">Desconto máximo seguro</span>
+                  <span className="font-semibold text-[#5E3ECF]">{result.desconto_maximo_seguro.toFixed(0)}%</span>
+                </div>
+
+                {result.below_minimo && (
+                  <div className="bg-[#FFF0F0] border border-[#FFD0D0] rounded-2xl p-4 text-sm text-[#E65A5A]">
+                    ⚠ Atenção: seu preço atual pode estar abaixo do custo mínimo.
+                  </div>
+                )}
+                {!result.below_minimo && result.below_saudavel && (
+                  <div className="bg-[#FFF8EB] border border-[#FFE8B8] rounded-2xl p-4 text-sm text-[#B8860B]">
+                    ⚠ Seu preço atual já está abaixo do preço saudável recomendado.
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowBreakdown(!showBreakdown)}
+                  className="text-sm text-[#5E3ECF] font-medium text-left"
+                >
+                  {showBreakdown ? "Ocultar" : "Ver"} detalhamento do custo total {showBreakdown ? "▲" : "▼"}
+                </button>
+
+                {showBreakdown && (
+                  <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex flex-col gap-2 text-sm">
+                    <div className="flex justify-between"><span className="text-[#9999BB]">Insumos</span><span>{formatCurrency(result.breakdown.insumos)}</span></div>
+                    <div className="flex justify-between"><span className="text-[#9999BB]">Comissão</span><span>{formatCurrency(result.breakdown.comissao)}</span></div>
+                    <div className="flex justify-between"><span className="text-[#9999BB]">Impostos</span><span>{formatCurrency(result.breakdown.impostos)}</span></div>
+                    <div className="flex justify-between"><span className="text-[#9999BB]">Taxas de recebimento</span><span>{formatCurrency(result.breakdown.taxas)}</span></div>
+                    <div className="flex justify-between"><span className="text-[#9999BB]">Tempo consumido</span><span>{formatCurrency(result.breakdown.tempo)}</span></div>
+                    <div className="flex justify-between font-semibold text-[#1A1A2E] pt-2 border-t border-[#E5E5F0]">
+                      <span>Total</span><span>{formatCurrency(result.breakdown.total)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowWhatsApp(true)}
+                  className="w-full h-12 bg-[#25D366] text-white rounded-xl font-semibold text-sm
+                             hover:bg-[#1ebe5d] transition-all active:scale-95"
+                >
+                  📱 Copiar mensagem
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
-    </div>
+
+      {showWhatsApp && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-[#1A1A2E]">📱 Mensagem WhatsApp</h2>
+              <button onClick={() => setShowWhatsApp(false)} className="text-[#9999BB] hover:text-[#4A4A6A] text-xl">✕</button>
+            </div>
+            <div className="bg-[#ECE5DD] rounded-xl p-4 mb-4 text-sm text-[#1A1A2E] whitespace-pre-wrap leading-relaxed">
+              {whatsappText}
+            </div>
+            <button
+              onClick={handleCopy}
+              className="w-full h-11 bg-[#5E3ECF] text-white rounded-xl font-semibold hover:bg-[#7C4DFF] transition-all active:scale-95"
+            >
+              {copied ? "✓ Copiado!" : "📋 Copiar mensagem"}
+            </button>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }

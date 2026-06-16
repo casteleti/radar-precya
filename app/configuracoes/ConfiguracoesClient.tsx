@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, parseCurrency } from "@/lib/utils";
 import { calculateCapacity, type PaymentMethod } from "@/lib/calculadora";
+import AppShell from "@/app/components/AppShell";
 
 interface CostProfile {
   monthly_fixed_costs: number;
@@ -160,18 +161,12 @@ export default function ConfiguracoesClient({ clinicName, costProfile }: Props) 
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFE]">
-      <header className="bg-white border-b border-[#E5E5F0] px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <button onClick={() => router.push("/calculadora")} className="text-lg font-semibold text-[#2E1A73]">
-            ← Radar Precya
-          </button>
-          <span className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</span>
+    <AppShell clinicName={clinicName}>
+      <main className="max-w-3xl mx-auto p-4 pt-6 flex flex-col gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-[#1A1A2E]">Configurações</h1>
+          <p className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</p>
         </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto p-4 pt-6 pb-12 flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-[#1A1A2E]">Configurações</h1>
 
         <div className="bg-[#2E1A73] rounded-2xl shadow-sm p-5 text-center">
           <p className="text-white/70 text-xs uppercase tracking-wide mb-1">Custo por hora atual</p>
@@ -303,6 +298,6 @@ export default function ConfiguracoesClient({ clinicName, costProfile }: Props) 
           {loading ? "Salvando..." : "Salvar alterações"}
         </button>
       </main>
-    </div>
+    </AppShell>
   );
 }

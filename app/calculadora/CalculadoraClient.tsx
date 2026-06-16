@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   simulate,
   calculateInsights,
-  generateWhatsAppMessage,
+  calculateCapacity,
   classificationLabel,
   type ClinicCapacity,
 } from "@/lib/calculadora";
 import { formatCurrency } from "@/lib/utils";
+import AppShell from "@/app/components/AppShell";
 
 interface Procedure {
   id: string;
@@ -27,264 +28,245 @@ interface Props {
   procedures: Procedure[];
 }
 
-const DISCOUNT_CHIPS = [0, 5, 10, 15, 20];
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-10 px-3 rounded-xl font-medium text-sm border transition-all active:scale-95 ${
-        active
-          ? "bg-[#5E3ECF] text-white border-[#5E3ECF]"
-          : "bg-white text-[#4A4A6A] border-[#E5E5F0] hover:border-[#B79CFF]"
-      }`}
-    >
-      {children}
-    </button>
-  );
+function StatusDot({ status }: { status: "healthy" | "risk" | "loss" }) {
+  const color = status === "healthy" ? "bg-[#1FAE63]" : status === "risk" ? "bg-[#B8860B]" : "bg-[#E65A5A]";
+  return <span className={`inline-block w-2 h-2 rounded-full ${color}`} />;
 }
 
 export default function CalculadoraClient({ clinicName, clinic, procedures }: Props) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState(procedures[0]?.id ?? "");
-  const [discount, setDiscount] = useState(0);
-  const [showWhatsApp, setShowWhatsApp] = useState(false);
-  const [showBreakdown, setShowBreakdown] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  const procedure = procedures.find((p) => p.id === selectedId);
+  const capacity = useMemo(() => calculateCapacity(clinic), [clinic]);
 
-  const result = useMemo(() => {
-    if (!procedure) return null;
-    return simulate(clinic, procedure, discount);
-  }, [procedure, clinic, discount]);
+  const results = useMemo(
+    () => procedures.map((p) => ({ procedure: p, result: simulate(clinic, p, 0) })),
+    [clinic, procedures]
+  );
+
+  const validResults = results.filter((r) => r.result.valid);
+
+  const avgProfit =
+    validResults.length > 0
+      ? validResults.reduce((sum, r) => sum + r.result.profit, 0) / validResults.length
+      : 0;
+  const avgMargin =
+    validResults.length > 0
+      ? validResults.reduce((sum, r) => sum + r.result.margin_pct, 0) / validResults.length
+      : 0;
+  const avgProfitPerHour =
+    validResults.length > 0
+      ? validResults.reduce((sum, r) => sum + r.result.profit_per_hour, 0) / validResults.length
+      : 0;
+  const avgSafeDiscount =
+    validResults.length > 0
+      ? validResults.reduce((sum, r) => sum + r.result.desconto_maximo_seguro, 0) / validResults.length
+      : 0;
+
+  const marginClassification = classificationLabel(avgMargin);
+  const isHealthy = avgMargin >= 25;
 
   const insights = useMemo(() => calculateInsights(clinic, procedures), [clinic, procedures]);
 
-  const whatsappText = useMemo(() => {
-    if (!result || !procedure) return "";
-    return generateWhatsAppMessage(procedure.name, discount, result.final_price, procedure.price, result.status);
-  }, [result, procedure, discount]);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(whatsappText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/auth/login";
-  }
-
-  const classification = result && result.valid ? classificationLabel(result.margin_pct) : null;
-
   return (
-    <div className="min-h-screen bg-[#FAFAFE]">
-      <header className="bg-white border-b border-[#E5E5F0] px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-[#2E1A73]">Radar Precya</h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-[#9999BB] hidden sm:inline">Olá, {clinicName} 👋</span>
-            <button onClick={() => router.push("/procedimentos")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
-              Procedimentos
-            </button>
-            <button onClick={() => router.push("/configuracoes")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
-              Configurações
-            </button>
-            <button onClick={handleLogout} className="text-xs text-[#9999BB] hover:text-[#4A4A6A]">Sair</button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto p-4 pt-6 pb-28 flex flex-col gap-4">
-        <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4">
-          <select
-            value={selectedId}
-            onChange={(e) => { setSelectedId(e.target.value); setDiscount(0); }}
-            className="w-full h-11 px-4 rounded-xl border border-[#E5E5F0] text-base text-[#1A1A2E]
-                       focus:outline-none focus:ring-2 focus:ring-[#B79CFF] focus:border-[#5E3ECF]
-                       bg-white cursor-pointer font-medium"
-          >
-            {procedures.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</option>
-            ))}
-          </select>
+    <AppShell clinicName={clinicName}>
+      <main className="max-w-6xl mx-auto p-4 pt-6 flex flex-col gap-6 lg:gap-8">
+        {/* Greeting */}
+        <div>
+          <h1 className="text-xl lg:text-2xl font-semibold text-[#1A1A2E]">Olá, {clinicName}! 👋</h1>
+          <p className="text-sm text-[#9999BB] mt-1">Aqui está o resumo da saúde financeira da sua clínica.</p>
         </div>
 
-        {result && !result.valid && (
-          <div className="bg-[#FFF0F0] border border-[#FFD0D0] rounded-2xl p-4 text-sm text-[#E65A5A]">
-            {result.error}
+        {/* Hero + status (desktop: side by side) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 bg-gradient-to-br from-[#EDE9FF] to-white rounded-3xl p-6 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm text-[#4A4A6A] font-medium">Seu custo operacional</p>
+              <span className="text-[#9999BB] text-xs" title="Custo fixo dividido pelas horas efetivas de atendimento">ⓘ</span>
+            </div>
+            <p className="text-4xl font-bold text-[#2E1A73]">
+              {formatCurrency(capacity.cost_per_hour)} <span className="text-lg font-medium text-[#4A4A6A]">/h</span>
+            </p>
+            <p className="text-sm text-[#9999BB]">
+              {capacity.effective_hours.toFixed(0)}h efetivas de {capacity.hours_available.toFixed(0)}h disponíveis este mês
+            </p>
           </div>
-        )}
 
-        {result && result.valid && (
-          <>
-            <div className="bg-[#2E1A73] rounded-2xl shadow-sm p-6 text-center">
-              <p className="text-white/70 text-xs uppercase tracking-wide mb-1">Preço saudável</p>
-              <p className="text-4xl font-bold text-white">{formatCurrency(result.preco_saudavel)}</p>
-              {classification && (
-                <span className="bg-white/15 text-white text-xs px-3 py-1 rounded-full inline-block mt-2">
-                  {classification.emoji} {classification.label}
-                </span>
-              )}
+          <div className="hidden lg:flex flex-col justify-between bg-white rounded-3xl border border-[#E5E5F0] shadow-sm p-6">
+            <div>
+              <p className={`font-semibold ${isHealthy ? "text-[#1FAE63]" : "text-[#B8860B]"}`}>
+                {isHealthy ? "✓ Sua clínica está saudável!" : "⚠ Atenção à margem"}
+              </p>
+              <p className="text-sm text-[#9999BB] mt-1">
+                Margem média de {avgMargin.toFixed(0)}% nos seus procedimentos.
+              </p>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
-                <p className="text-xs text-[#9999BB]">Preço mínimo</p>
-                <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.preco_minimo)}</p>
-              </div>
-              <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
-                <p className="text-xs text-[#9999BB]">Preço premium</p>
-                <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.preco_premium)}</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-5">
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium text-[#4A4A6A]">Simular desconto</label>
-                <span className="text-lg font-bold text-[#5E3ECF]">{discount}%</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {DISCOUNT_CHIPS.map((d) => (
-                  <Chip key={d} active={discount === d} onClick={() => setDiscount(d)}>{d}%</Chip>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className={`rounded-xl p-3 text-center ${classification?.emoji === "❌" ? "bg-[#FFF0F0]" : classification?.emoji === "⚠️" ? "bg-[#FFF8EB]" : "bg-[#EAFBF1]"}`}>
-                <p className="text-xs text-[#9999BB]">Margem</p>
-                <p className="font-semibold text-[#1A1A2E]">{result.margin_pct.toFixed(0)}%</p>
-                <p className="text-xs mt-1">{classification?.emoji} {classification?.label}</p>
-              </div>
-              <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
-                <p className="text-xs text-[#9999BB]">Lucro / lucro por hora</p>
-                <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.profit)}</p>
-                <p className="text-xs text-[#9999BB]">{formatCurrency(result.profit_per_hour)}/h</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex items-center justify-between">
-              <span className="text-sm text-[#4A4A6A]">Desconto máximo seguro</span>
-              <span className="font-semibold text-[#5E3ECF]">{result.desconto_maximo_seguro.toFixed(0)}%</span>
-            </div>
-
-            {result.below_minimo && (
-              <div className="bg-[#FFF0F0] border border-[#FFD0D0] rounded-2xl p-4 text-sm text-[#E65A5A]">
-                ⚠ Atenção: seu preço atual pode estar abaixo do custo mínimo.
-              </div>
-            )}
-            {!result.below_minimo && result.below_saudavel && (
-              <div className="bg-[#FFF8EB] border border-[#FFE8B8] rounded-2xl p-4 text-sm text-[#B8860B]">
-                ⚠ Seu preço atual já está abaixo do preço saudável recomendado.
-              </div>
-            )}
-
             <button
-              onClick={() => setShowBreakdown(!showBreakdown)}
-              className="text-sm text-[#5E3ECF] font-medium text-left"
+              onClick={() => document.getElementById("procedimentos-section")?.scrollIntoView({ behavior: "smooth" })}
+              className="mt-4 h-11 bg-[#EDE9FF] text-[#5E3ECF] rounded-xl font-medium text-sm hover:bg-[#E0D8FF] transition-all"
             >
-              {showBreakdown ? "Ocultar" : "Ver"} detalhamento do custo total {showBreakdown ? "▲" : "▼"}
+              Ver análise completa
             </button>
+          </div>
+        </div>
 
-            {showBreakdown && (
-              <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex flex-col gap-2 text-sm">
-                <div className="flex justify-between"><span className="text-[#9999BB]">Insumos</span><span>{formatCurrency(result.breakdown.insumos)}</span></div>
-                <div className="flex justify-between"><span className="text-[#9999BB]">Comissão</span><span>{formatCurrency(result.breakdown.comissao)}</span></div>
-                <div className="flex justify-between"><span className="text-[#9999BB]">Impostos</span><span>{formatCurrency(result.breakdown.impostos)}</span></div>
-                <div className="flex justify-between"><span className="text-[#9999BB]">Taxas de recebimento</span><span>{formatCurrency(result.breakdown.taxas)}</span></div>
-                <div className="flex justify-between"><span className="text-[#9999BB]">Tempo consumido</span><span>{formatCurrency(result.breakdown.tempo)}</span></div>
-                <div className="flex justify-between font-semibold text-[#1A1A2E] pt-2 border-t border-[#E5E5F0]">
-                  <span>Total</span><span>{formatCurrency(result.breakdown.total)}</span>
-                </div>
-              </div>
-            )}
+        {/* Resumo rápido */}
+        <div>
+          <h2 className="text-sm font-semibold text-[#4A4A6A] mb-3">Resumo rápido</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4">
+              <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base mb-2">💰</span>
+              <p className="text-xs text-[#9999BB]">Lucro médio</p>
+              <p className="text-lg font-semibold text-[#1A1A2E]">{formatCurrency(avgProfit)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4">
+              <span className="w-8 h-8 rounded-full bg-[#EAFBF1] flex items-center justify-center text-base mb-2">📊</span>
+              <p className="text-xs text-[#9999BB]">Margem média</p>
+              <p className="text-lg font-semibold text-[#1A1A2E]">{avgMargin.toFixed(0)}%</p>
+              <span className="text-xs">{marginClassification.emoji} {marginClassification.label}</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4">
+              <span className="w-8 h-8 rounded-full bg-[#E8F0FF] flex items-center justify-center text-base mb-2">⏱</span>
+              <p className="text-xs text-[#9999BB]">Lucro por hora</p>
+              <p className="text-lg font-semibold text-[#1A1A2E]">{formatCurrency(avgProfitPerHour)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4">
+              <span className="w-8 h-8 rounded-full bg-[#FFF3E0] flex items-center justify-center text-base mb-2">🏷️</span>
+              <p className="text-xs text-[#9999BB]">Desconto seguro</p>
+              <p className="text-lg font-semibold text-[#1A1A2E]">{avgSafeDiscount.toFixed(0)}%</p>
+            </div>
+          </div>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="procedimentos-section">
+          {/* Procedimentos */}
+          <div className="lg:col-span-2 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#4A4A6A]">Seus procedimentos</h2>
+              <button onClick={() => router.push("/procedimentos")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
+                Ver todos →
+              </button>
+            </div>
+
+            {/* Mobile: card list */}
+            <div className="flex flex-col gap-2 lg:hidden">
+              {results.map(({ procedure, result }) => (
+                <button
+                  key={procedure.id}
+                  onClick={() => router.push("/procedimentos")}
+                  className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex items-center gap-3 text-left hover:border-[#B79CFF] transition-all active:scale-[0.99]"
+                >
+                  <span className="w-10 h-10 rounded-full bg-[#EDE9FF] flex items-center justify-center text-lg shrink-0">💉</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[#1A1A2E] truncate">{procedure.name}</p>
+                    <p className="text-xs text-[#9999BB]">{procedure.time_minutes} min</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-semibold text-[#1A1A2E]">{formatCurrency(procedure.price)}</p>
+                    {result.valid ? (
+                      <p className="text-xs text-[#9999BB] flex items-center gap-1 justify-end">
+                        <StatusDot status={result.status} /> {result.margin_pct.toFixed(0)}% · {formatCurrency(result.profit_per_hour)}/h
+                      </p>
+                    ) : (
+                      <p className="text-xs text-[#E65A5A]">Inválido</p>
+                    )}
+                  </div>
+                  <span className="text-[#9999BB]">›</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden lg:block bg-white rounded-2xl border border-[#E5E5F0] shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#E5E5F0] text-left text-xs text-[#9999BB]">
+                    <th className="py-3 px-4 font-medium">Procedimento</th>
+                    <th className="py-3 px-4 font-medium">Preço</th>
+                    <th className="py-3 px-4 font-medium">Margem</th>
+                    <th className="py-3 px-4 font-medium">Lucro/h</th>
+                    <th className="py-3 px-4 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map(({ procedure, result }) => (
+                    <tr
+                      key={procedure.id}
+                      onClick={() => router.push("/procedimentos")}
+                      className="border-b border-[#E5E5F0] last:border-0 hover:bg-[#FAFAFE] cursor-pointer transition-all"
+                    >
+                      <td className="py-3 px-4 font-medium text-[#1A1A2E]">{procedure.name}</td>
+                      <td className="py-3 px-4 text-[#4A4A6A]">{formatCurrency(procedure.price)}</td>
+                      <td className="py-3 px-4">
+                        {result.valid ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#FAFAFE] text-xs font-medium text-[#4A4A6A]">
+                            <StatusDot status={result.status} /> {result.margin_pct.toFixed(0)}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#E65A5A]">Inválido</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-[#4A4A6A]">{result.valid ? `${formatCurrency(result.profit_per_hour)}/h` : "—"}</td>
+                      <td className="py-3 px-4 text-right text-[#9999BB]">›</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Insights + CTA (desktop right column) */}
+          <div className="flex flex-col gap-4">
             {(insights.most_profitable_per_hour || insights.most_time_consuming || insights.needs_repricing) && (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold text-[#4A4A6A]">✨ Insights da sua clínica</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {insights.most_profitable_per_hour && (
-                    <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base">🏆</span>
-                        <p className="text-xs text-[#9999BB]">Mais lucrativo por hora</p>
-                      </div>
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold text-[#4A4A6A]">Insights para você</h2>
+
+                {insights.most_profitable_per_hour && (
+                  <div className="bg-[#EAFBF1] rounded-2xl p-4 flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-base shrink-0">🏆</span>
+                    <div>
+                      <p className="text-xs text-[#4A4A6A]">Mais lucrativo por hora</p>
                       <p className="font-semibold text-[#1A1A2E]">{insights.most_profitable_per_hour.name}</p>
                       <p className="text-xs text-[#9999BB]">{formatCurrency(insights.most_profitable_per_hour.value)}/h</p>
                     </div>
-                  )}
-                  {insights.most_time_consuming && (
-                    <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base">⏱</span>
-                        <p className="text-xs text-[#9999BB]">Mais consome agenda</p>
-                      </div>
+                  </div>
+                )}
+                {insights.most_time_consuming && (
+                  <div className="bg-[#FFF3E0] rounded-2xl p-4 flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-base shrink-0">⏱</span>
+                    <div>
+                      <p className="text-xs text-[#4A4A6A]">Mais consome agenda</p>
                       <p className="font-semibold text-[#1A1A2E]">{insights.most_time_consuming.name}</p>
                       <p className="text-xs text-[#9999BB]">{insights.most_time_consuming.minutes} min</p>
                     </div>
-                  )}
-                  {insights.needs_repricing && (
-                    <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base">📈</span>
-                        <p className="text-xs text-[#9999BB]">Precisa reajuste</p>
-                      </div>
+                  </div>
+                )}
+                {insights.needs_repricing && (
+                  <div className="bg-[#FDEAF3] rounded-2xl p-4 flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-base shrink-0">📈</span>
+                    <div>
+                      <p className="text-xs text-[#4A4A6A]">Precisa reajuste</p>
                       <p className="font-semibold text-[#1A1A2E]">{insights.needs_repricing.name}</p>
                       <p className="text-xs text-[#9999BB]">Margem baixa</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
-          </>
-        )}
+
+            <div className="bg-[#2E1A73] rounded-2xl p-5 flex flex-col gap-3">
+              <p className="text-white text-sm leading-relaxed">
+                ⚡ Cadastre mais procedimentos e descubra insights ainda mais poderosos para sua clínica.
+              </p>
+              <button
+                onClick={() => router.push("/procedimentos")}
+                className="h-11 bg-white text-[#2E1A73] rounded-xl font-semibold text-sm hover:bg-[#EDE9FF] transition-all active:scale-95"
+              >
+                + Novo procedimento
+              </button>
+            </div>
+          </div>
+        </div>
       </main>
-
-      {result && result.valid && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E5F0] p-4">
-          <div className="max-w-3xl mx-auto">
-            <button
-              onClick={() => setShowWhatsApp(true)}
-              className="w-full h-12 bg-[#25D366] text-white rounded-xl font-semibold text-sm
-                         hover:bg-[#1ebe5d] transition-all active:scale-95"
-            >
-              📱 Copiar mensagem
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showWhatsApp && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-[#1A1A2E]">📱 Mensagem WhatsApp</h2>
-              <button onClick={() => setShowWhatsApp(false)} className="text-[#9999BB] hover:text-[#4A4A6A] text-xl">✕</button>
-            </div>
-            <div className="bg-[#ECE5DD] rounded-xl p-4 mb-4 text-sm text-[#1A1A2E] whitespace-pre-wrap leading-relaxed">
-              {whatsappText}
-            </div>
-            <button
-              onClick={handleCopy}
-              className="w-full h-11 bg-[#5E3ECF] text-white rounded-xl font-semibold hover:bg-[#7C4DFF] transition-all active:scale-95"
-            >
-              {copied ? "✓ Copiado!" : "📋 Copiar mensagem"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </AppShell>
   );
 }
