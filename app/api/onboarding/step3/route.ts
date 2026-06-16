@@ -2,15 +2,11 @@ import { z } from "zod";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const procedureSchema = z.object({
-  name: z.string().min(1).max(80).trim(),
-  price: z.number().min(0.01),
-  product_cost: z.number().min(0).default(0),
-  commission_pct: z.number().min(0).max(100).default(0),
-});
-
 const schema = z.object({
-  procedures: z.array(procedureSchema).min(1).max(20),
+  days_per_month: z.number().int().min(1).max(31),
+  hours_per_day: z.number().min(0.5).max(24),
+  occupancy_pct: z.number().min(1).max(100),
+  occupancy_estimated: z.boolean().default(false),
 });
 
 export async function POST(req: Request) {
@@ -20,11 +16,10 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) return Response.json({ error: "Dados inválidos" }, { status: 400 });
 
-  await prisma.procedure.createMany({
-    data: parsed.data.procedures.map((p) => ({
-      ...p,
-      clinic_id: session.clinic_id,
-    })),
+  await prisma.clinicCostProfile.upsert({
+    where: { clinic_id: session.clinic_id },
+    create: { clinic_id: session.clinic_id, ...parsed.data },
+    update: parsed.data,
   });
 
   return Response.json({ success: true });

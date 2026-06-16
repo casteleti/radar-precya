@@ -115,30 +115,46 @@ enum SubscriptionStatus {
 }
 
 model ClinicCostProfile {
-  id                   String   @id @default(uuid())
-  clinic_id            String   @unique
-  monthly_fixed_costs  Float    @default(0)
-  monthly_appointments Int      @default(1)
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  id                   String        @id @default(uuid())
+  clinic_id            String        @unique
+  monthly_fixed_costs  Float         @default(0)
+  monthly_appointments Int           @default(1)
+  days_per_month       Int           @default(22)
+  hours_per_day        Float         @default(8)
+  occupancy_pct        Float         @default(70)
+  occupancy_estimated  Boolean       @default(true)
+  payment_method       PaymentMethod @default(both)
+  card_fee_pct         Float         @default(0)
+  tax_pct              Float         @default(0)
+  target_margin_pct    Float         @default(35)
+  created_at           DateTime      @default(now())
+  updated_at           DateTime      @updatedAt
 
-  clinic               Clinic   @relation(fields: [clinic_id], references: [id])
+  clinic               Clinic        @relation(fields: [clinic_id], references: [id])
 
   @@map("clinic_cost_profiles")
 }
 
-model Procedure {
-  id             String   @id @default(uuid())
-  clinic_id      String
-  name           String
-  price          Float
-  product_cost   Float    @default(0)
-  commission_pct Float    @default(0)
-  active         Boolean  @default(true)
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+enum PaymentMethod {
+  pix
+  card
+  both
+}
 
-  clinic         Clinic   @relation(fields: [clinic_id], references: [id])
+model Procedure {
+  id                   String   @id @default(uuid())
+  clinic_id            String
+  name                 String
+  price                Float
+  product_cost         Float    @default(0)
+  commission_pct       Float    @default(0)
+  time_minutes         Int      @default(0)
+  return_time_minutes  Int      @default(0)
+  active               Boolean  @default(true)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  clinic               Clinic   @relation(fields: [clinic_id], references: [id])
 
   @@index([clinic_id])
   @@map("procedures")

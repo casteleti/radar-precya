@@ -1,0 +1,489 @@
+# RADAR PRECYA — FLUXO REVISADO (VERSÃO APROVADA)
+
+## Filosofia do Produto
+
+O Radar Precya não é um ERP.
+
+O Radar Precya não é um sistema financeiro.
+
+O Radar Precya é um motor de decisão para clínicas de estética.
+
+Seu objetivo é responder:
+
+> "Posso vender este procedimento por esse valor sem prejudicar minha margem?"
+
+O foco é:
+
+* simplicidade;
+* clareza;
+* confiança na decisão;
+* precificação baseada em custo real;
+* desconto com segurança;
+* experiência mobile-first.
+
+---
+
+# TELA 1 — BOAS-VINDAS
+
+## Objetivo
+
+Primeiro contato emocional.
+
+Mostrar rapidamente o valor da plataforma.
+
+### Conteúdo
+
+RADAR PRECYA
+
+Descubra quanto seus procedimentos realmente deixam de lucro.
+
+Sem planilhas.
+Sem ERP.
+
+Em poucos minutos.
+
+[ Configurar Clínica ]
+
+---
+
+# TELA 2 — CUSTOS DA CLÍNICA
+
+## PASSO 1 DE 4
+
+### Pergunta
+
+Quanto custa manter sua clínica funcionando?
+
+### Opções
+
+( ) Já sei o valor mensal
+
+( ) Quero calcular por categorias
+
+[ Continuar ]
+
+---
+
+# TELA 2A — VALOR DIRETO
+
+## Custos Mensais
+
+Campo:
+
+R$ 0,00
+
+### Microcopy
+
+Inclua aluguel, equipe, marketing, sistemas, contador e demais despesas fixas.
+
+[ Continuar ]
+
+---
+
+# TELA 2B — CÁLCULO POR CATEGORIAS
+
+## Custos Mensais
+
+Aluguel
+
+Equipe
+
+Pró-labore
+
+Marketing
+
+Softwares
+
+Contador
+
+Equipamentos / manutenção
+
+Água, luz e internet
+
+Outros
+
+### Resultado
+
+TOTAL MENSAL
+
+R$ X.XXX
+
+[ Continuar ]
+
+---
+
+# TELA 3 — CAPACIDADE DA CLÍNICA
+
+## PASSO 2 DE 4
+
+### Pergunta 1
+
+Quantos dias por mês você atende?
+
+Exemplo:
+
+22 dias
+
+### Pergunta 2
+
+Quantas horas por dia sua agenda fica disponível?
+
+Exemplo:
+
+8 horas
+
+### Pergunta 3
+
+Qual sua ocupação média atual?
+
+( ) 30%
+
+( ) 50%
+
+( ) 70%
+
+( ) 85%
+
+( ) Não sei
+
+[ Calcular ]
+
+---
+
+# TELA 3 — RESULTADO
+
+## Seu Radar Financeiro
+
+Horas disponíveis:
+
+176h/mês
+
+Horas efetivas:
+
+123h/mês
+
+Custo/hora ideal:
+
+R$ 52,84
+
+Custo/hora atual:
+
+R$ 75,61
+
+### Insight
+
+Quanto mais sua agenda enche, menor fica seu custo por hora.
+
+[ Continuar ]
+
+---
+
+# TELA 4 — CONFIGURAÇÃO FINANCEIRA
+
+## PASSO 3 DE 4
+
+### Forma principal de recebimento
+
+( ) PIX
+
+( ) Cartão
+
+( ) Ambos
+
+### Taxa média do cartão
+
+4,5%
+
+### Tributação aproximada
+
+6%
+
+### Margem desejada
+
+Slider
+
+25% — 35% — 45%
+
+[ Continuar ]
+
+---
+
+# TELA 5 — CADASTRO DE PROCEDIMENTO
+
+## PASSO 4 DE 4
+
+### Nome
+
+Botox
+
+### Preço atual
+
+R$ 900
+
+### Tempo total consumido
+
+45 minutos
+
+#### Considerar:
+
+* preparação;
+* execução;
+* fotos;
+* limpeza;
+* registro.
+
+### Insumos
+
+R$ 220
+
+### Comissão
+
+10%
+
+### Opcional
+
+Tempo de retorno/retoque incluído
+
+0 min
+
+15 min
+
+30 min
+
+[ Salvar Procedimento ]
+
+---
+
+# PRIMEIRA ENTREGA DE VALOR
+
+## Procedimento: Botox
+
+Preço atual:
+
+R$ 900
+
+Preço mínimo:
+
+R$ 615
+
+Preço saudável:
+
+R$ 845
+
+Preço premium:
+
+R$ 990
+
+Lucro estimado:
+
+R$ 438
+
+Lucro por hora:
+
+R$ 584/h
+
+Margem:
+
+48%
+
+Classificação:
+
+🟢 Excelente
+
+---
+
+# TELA PRINCIPAL
+
+## Procedimento Selecionado
+
+Botox
+
+Preço atual:
+
+R$ 900
+
+---
+
+## Simulação de Desconto
+
+Slider:
+
+0% → 50%
+
+### Resultado em Tempo Real
+
+Novo preço:
+
+R$ 810
+
+Lucro:
+
+R$ 348
+
+Lucro por hora:
+
+R$ 464/h
+
+Margem:
+
+39%
+
+Classificação:
+
+⚠ Margem em risco
+
+---
+
+## Desconto Máximo Seguro
+
+7%
+
+### Conceito
+
+Desconto máximo que mantém a margem saudável.
+
+---
+
+## Ações
+
+[ Copiar Mensagem ]
+
+---
+
+# DETALHAMENTO DO CUSTO TOTAL
+
+Ao tocar no valor.
+
+Exibir:
+
+Insumos:
+
+R$ X
+
+Comissão:
+
+R$ X
+
+Impostos:
+
+R$ X
+
+Taxas de recebimento:
+
+R$ X
+
+Tempo consumido:
+
+R$ X
+
+Total:
+
+R$ X
+
+Objetivo:
+
+gerar confiança no cálculo.
+
+---
+
+# CONCEITOS DE PREÇO
+
+## Preço Mínimo
+
+Cobre:
+
+* insumos;
+* comissão;
+* impostos;
+* taxas;
+* custo operacional.
+
+Abaixo disso existe prejuízo.
+
+---
+
+## Preço Saudável
+
+Preço mínimo + margem desejada.
+
+Representa a operação saudável.
+
+---
+
+## Preço Premium
+
+Preço saudável + margem adicional de posicionamento.
+
+---
+
+# INSIGHTS
+
+## Mais lucrativo por hora
+
+Botox
+
+---
+
+## Mais consome agenda
+
+Drenagem
+
+---
+
+## Procedimento que precisa reajuste
+
+Limpeza de Pele
+
+---
+
+## Ponto de equilíbrio
+
+102 horas por mês
+
+---
+
+# O QUE NÃO FAZ PARTE DO MVP
+
+* ERP
+* Fluxo financeiro
+* DRE
+* Contas a pagar
+* Agenda
+* CRM
+* Integrações complexas
+* Biblioteca de insumos
+* Curva ABC completa
+* Esteira de produtos
+* Multiusuário
+
+---
+
+# NÚCLEO MATEMÁTICO
+
+Preço sugerido =
+
+Insumos
+
+* Comissão
+* Impostos
+* Taxas de recebimento
+* (Tempo × Custo/Hora)
+* Margem desejada
+
+---
+
+# PROPOSTA DE VALOR FINAL
+
+O Radar Precya transforma números complexos em decisões simples.
+
+A clínica entende:
+
+* quanto custa atender;
+* quanto realmente sobra;
+* qual preço praticar;
+* quanto pode descontar;
+* quais procedimentos geram mais lucro.
+
+Sem planilhas.
+Sem ERP.
+Sem adivinhação.

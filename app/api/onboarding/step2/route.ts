@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   monthly_fixed_costs: z.number().min(0),
-  monthly_appointments: z.number().int().min(1),
 });
 
 export async function POST(req: Request) {
