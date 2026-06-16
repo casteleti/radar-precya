@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifyMagicLink } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -8,21 +8,24 @@ export async function GET(req: NextRequest) {
   const base = `${proto}://${host}`;
 
   if (!token) {
-    return Response.redirect(new URL("/auth/login?error=invalid", base));
+    return NextResponse.redirect(new URL("/auth/login?error=invalid", base));
   }
 
   const result = await verifyMagicLink(token);
   if (!result) {
-    return Response.redirect(new URL("/auth/login?error=expired", base));
+    return NextResponse.redirect(new URL("/auth/login?error=expired", base));
   }
 
   const redirect = result.onboarding_completed ? "/calculadora" : "/onboarding";
-  const response = Response.redirect(new URL(redirect, base));
+  const response = NextResponse.redirect(new URL(redirect, base));
 
-  response.headers.set(
-    "Set-Cookie",
-    `session_token=${result.sessionToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`
-  );
+  response.cookies.set("session_token", result.sessionToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 2592000,
+  });
 
   return response;
 }
