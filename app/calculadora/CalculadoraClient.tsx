@@ -98,13 +98,16 @@ export default function CalculadoraClient({ clinicName, clinic, procedures }: Pr
             <button onClick={() => router.push("/procedimentos")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
               Procedimentos
             </button>
+            <button onClick={() => router.push("/configuracoes")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
+              Configurações
+            </button>
             <button onClick={handleLogout} className="text-xs text-[#9999BB] hover:text-[#4A4A6A]">Sair</button>
           </div>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto p-4 pt-6 pb-28 flex flex-col gap-4">
-        <div className="bg-white rounded-2xl border border-[#E5E5F0] p-4">
+        <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4">
           <select
             value={selectedId}
             onChange={(e) => { setSelectedId(e.target.value); setDiscount(0); }}
@@ -126,23 +129,28 @@ export default function CalculadoraClient({ clinicName, clinic, procedures }: Pr
 
         {result && result.valid && (
           <>
-            <div className="bg-[#2E1A73] rounded-2xl p-6 text-center">
+            <div className="bg-[#2E1A73] rounded-2xl shadow-sm p-6 text-center">
               <p className="text-white/70 text-xs uppercase tracking-wide mb-1">Preço saudável</p>
               <p className="text-4xl font-bold text-white">{formatCurrency(result.preco_saudavel)}</p>
+              {classification && (
+                <span className="bg-white/15 text-white text-xs px-3 py-1 rounded-full inline-block mt-2">
+                  {classification.emoji} {classification.label}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-xl border border-[#E5E5F0] p-3 text-center">
+              <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
                 <p className="text-xs text-[#9999BB]">Preço mínimo</p>
                 <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.preco_minimo)}</p>
               </div>
-              <div className="bg-white rounded-xl border border-[#E5E5F0] p-3 text-center">
+              <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
                 <p className="text-xs text-[#9999BB]">Preço premium</p>
                 <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.preco_premium)}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#E5E5F0] p-5">
+            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-5">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-sm font-medium text-[#4A4A6A]">Simular desconto</label>
                 <span className="text-lg font-bold text-[#5E3ECF]">{discount}%</span>
@@ -160,14 +168,14 @@ export default function CalculadoraClient({ clinicName, clinic, procedures }: Pr
                 <p className="font-semibold text-[#1A1A2E]">{result.margin_pct.toFixed(0)}%</p>
                 <p className="text-xs mt-1">{classification?.emoji} {classification?.label}</p>
               </div>
-              <div className="bg-white rounded-xl border border-[#E5E5F0] p-3 text-center">
+              <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3 text-center">
                 <p className="text-xs text-[#9999BB]">Lucro / lucro por hora</p>
                 <p className="font-semibold text-[#1A1A2E]">{formatCurrency(result.profit)}</p>
                 <p className="text-xs text-[#9999BB]">{formatCurrency(result.profit_per_hour)}/h</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#E5E5F0] p-4 flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex items-center justify-between">
               <span className="text-sm text-[#4A4A6A]">Desconto máximo seguro</span>
               <span className="font-semibold text-[#5E3ECF]">{result.desconto_maximo_seguro.toFixed(0)}%</span>
             </div>
@@ -191,7 +199,7 @@ export default function CalculadoraClient({ clinicName, clinic, procedures }: Pr
             </button>
 
             {showBreakdown && (
-              <div className="bg-white rounded-2xl border border-[#E5E5F0] p-4 flex flex-col gap-2 text-sm">
+              <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 flex flex-col gap-2 text-sm">
                 <div className="flex justify-between"><span className="text-[#9999BB]">Insumos</span><span>{formatCurrency(result.breakdown.insumos)}</span></div>
                 <div className="flex justify-between"><span className="text-[#9999BB]">Comissão</span><span>{formatCurrency(result.breakdown.comissao)}</span></div>
                 <div className="flex justify-between"><span className="text-[#9999BB]">Impostos</span><span>{formatCurrency(result.breakdown.impostos)}</span></div>
@@ -208,22 +216,31 @@ export default function CalculadoraClient({ clinicName, clinic, procedures }: Pr
                 <h3 className="text-sm font-semibold text-[#4A4A6A]">✨ Insights da sua clínica</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {insights.most_profitable_per_hour && (
-                    <div className="bg-white rounded-xl border border-[#E5E5F0] p-3">
-                      <p className="text-xs text-[#9999BB]">🏆 Mais lucrativo por hora</p>
+                    <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base">🏆</span>
+                        <p className="text-xs text-[#9999BB]">Mais lucrativo por hora</p>
+                      </div>
                       <p className="font-semibold text-[#1A1A2E]">{insights.most_profitable_per_hour.name}</p>
                       <p className="text-xs text-[#9999BB]">{formatCurrency(insights.most_profitable_per_hour.value)}/h</p>
                     </div>
                   )}
                   {insights.most_time_consuming && (
-                    <div className="bg-white rounded-xl border border-[#E5E5F0] p-3">
-                      <p className="text-xs text-[#9999BB]">⏱ Mais consome agenda</p>
+                    <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base">⏱</span>
+                        <p className="text-xs text-[#9999BB]">Mais consome agenda</p>
+                      </div>
                       <p className="font-semibold text-[#1A1A2E]">{insights.most_time_consuming.name}</p>
                       <p className="text-xs text-[#9999BB]">{insights.most_time_consuming.minutes} min</p>
                     </div>
                   )}
                   {insights.needs_repricing && (
-                    <div className="bg-white rounded-xl border border-[#E5E5F0] p-3">
-                      <p className="text-xs text-[#9999BB]">📈 Precisa reajuste</p>
+                    <div className="bg-white rounded-xl border border-[#E5E5F0] shadow-sm p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-8 h-8 rounded-full bg-[#EDE9FF] flex items-center justify-center text-base">📈</span>
+                        <p className="text-xs text-[#9999BB]">Precisa reajuste</p>
+                      </div>
                       <p className="font-semibold text-[#1A1A2E]">{insights.needs_repricing.name}</p>
                       <p className="text-xs text-[#9999BB]">Margem baixa</p>
                     </div>

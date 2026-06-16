@@ -153,7 +153,12 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
           <button onClick={() => router.push("/calculadora")} className="text-lg font-semibold text-[#2E1A73]">
             ← Radar Precya
           </button>
-          <span className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push("/configuracoes")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
+              Configurações
+            </button>
+            <span className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</span>
+          </div>
         </div>
       </header>
 
@@ -162,24 +167,32 @@ export default function ProcedimentosClient({ clinicName, procedures }: Props) {
 
         {!showForm && (
           <>
-            <div className="flex flex-col gap-3">
-              {list.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => startEdit(p)}
-                  className="bg-white rounded-2xl border border-[#E5E5F0] p-4 text-left hover:border-[#B79CFF] transition-all active:scale-[0.99]"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-[#1A1A2E]">{p.name}</p>
-                    <p className="font-semibold text-[#5E3ECF]">{formatCurrency(p.price)}</p>
-                  </div>
-                  <p className="text-xs text-[#9999BB] mt-1">
-                    {p.time_minutes > 0 ? `${p.time_minutes} min` : "Tempo não informado"}
-                    {p.return_time_minutes > 0 ? ` + ${p.return_time_minutes} min retorno` : ""}
-                  </p>
-                </button>
-              ))}
-            </div>
+            {list.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-8 text-center flex flex-col items-center gap-2">
+                <span className="w-12 h-12 rounded-full bg-[#EDE9FF] flex items-center justify-center text-2xl">📋</span>
+                <p className="font-semibold text-[#1A1A2E]">Nenhum procedimento cadastrado ainda</p>
+                <p className="text-sm text-[#9999BB]">Cadastre seu primeiro procedimento para começar a calcular preços.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {list.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => startEdit(p)}
+                    className="bg-white rounded-2xl border border-[#E5E5F0] shadow-sm p-4 text-left hover:border-[#B79CFF] transition-all active:scale-[0.99]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-[#1A1A2E]">{p.name}</p>
+                      <p className="font-semibold text-[#5E3ECF]">{formatCurrency(p.price)}</p>
+                    </div>
+                    <p className="text-xs text-[#9999BB] mt-1">
+                      {p.time_minutes > 0 ? `${p.time_minutes} min` : "Tempo não informado"}
+                      {p.return_time_minutes > 0 ? ` + ${p.return_time_minutes} min retorno` : ""}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <button
               onClick={startCreate}
