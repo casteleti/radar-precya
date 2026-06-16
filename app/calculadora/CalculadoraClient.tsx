@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   simulate,
   calculateInsights,
@@ -53,6 +54,7 @@ function Chip({
 }
 
 export default function CalculadoraClient({ clinicName, clinic, procedures }: Props) {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState(procedures[0]?.id ?? "");
   const [discount, setDiscount] = useState(0);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
@@ -92,7 +94,10 @@ export default function CalculadoraClient({ clinicName, clinic, procedures }: Pr
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-[#2E1A73]">Radar Precya</h1>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-[#9999BB]">Olá, {clinicName} 👋</span>
+            <span className="text-sm text-[#9999BB] hidden sm:inline">Olá, {clinicName} 👋</span>
+            <button onClick={() => router.push("/procedimentos")} className="text-xs text-[#5E3ECF] font-medium hover:text-[#7C4DFF]">
+              Procedimentos
+            </button>
             <button onClick={handleLogout} className="text-xs text-[#9999BB] hover:text-[#4A4A6A]">Sair</button>
           </div>
         </div>
